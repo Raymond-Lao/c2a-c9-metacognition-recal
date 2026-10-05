@@ -1,0 +1,44 @@
+重新计分（不重新调用模型）：_before_rescore.json
+
+翻盘记录 2 条：
+  [A] m21 trial=2 False → True  答案='国际儿童节（又称六一国际儿童节）'
+  [B-后置] m07 trial=0 False → True  答案='30万'
+
+修正后的核心指标：
+{
+  "效度层": {
+    "n_items": 550,
+    "accuracy": 1.0,
+    "mean_confidence": 0.9975,
+    "gap": -0.0025,
+    "ECE": 0.0025,
+    "Brier": 0.0001,
+    "hard_gap": -0.0015,
+    "parse_fail_rate": 0.0
+  },
+  "ICC": {
+    "icc": 0.3663,
+    "n_groups": 55,
+    "n_per_group_avg": 10.0,
+    "MSB": 4.1329,
+    "MSW": 0.6095,
+    "interpretation": "poor（低于 0.50：证实度主要由随机噪声构成）"
+  },
+  "C组ICC": {
+    "icc": 0.819,
+    "n_groups": 55,
+    "n_per_group_avg": 10.0,
+    "MSB": 4.904,
+    "MSW": 0.1061,
+    "interpretation": "good（0.75–0.90）"
+  },
+  "温度占比": {
+    "std_default_temp": 0.3419,
+    "std_zero_temp": 0.0439,
+    "temperature_share": 0.1284,
+    "note": "温度解释了相当一部分抖动，需要在结论里扣除"
+  },
+  "headline": "⚠️ 校准分 0.9975 看似优秀，但 ICC 仅 0.3663（poor）—— 这个「良好校准」很可能是测量噪声的假象。"
+}
+
+已保存 → real_run_results.json

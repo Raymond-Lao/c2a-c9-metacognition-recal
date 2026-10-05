@@ -1,0 +1,110 @@
+=== 1) 题库体检 ===
+  [OK  ] 总题数 = 60（目标 60）
+  [OK  ] easy = 24（目标 24，占 40%）
+  [OK  ] medium = 24（目标 24，占 40%）
+  [OK  ] hard = 12（目标 12，占 20%）
+  [OK  ] id 唯一性（60 个 id，60 个不同）
+  [OK  ] 每题都有非空标准答案
+  [OK  ] difficulty 取值合法
+  [OK  ] 开了容差的题只有 6 道（m01, m03, m06, m07, m14, m22）
+
+=== 2) parse_response：格式容错 ===
+  [OK  ] 标准 JSON: expect=True got=True
+  [OK  ] 代码块包裹: expect=True got=True
+  [OK  ] 夹在文本里: expect=True got=True
+  [OK  ] 超出 0-100 范围: expect=False got=False
+  [OK  ] 非 JSON: expect=False got=False
+  [OK  ] 空回复: expect=False got=False
+  [OK  ] 缺 confidence 字段: expect=False got=False
+  [OK  ] 缺 answer 字段: expect=False got=False
+
+=== 3) 确信度归一化（模型不听话时的兜底）===
+  [OK  ] 整数: _normalize_confidence(88) = 88.0
+  [OK  ] 字符串数字: _normalize_confidence('88') = 88.0
+  [OK  ] 带百分号: _normalize_confidence('88%') = 88.0
+  [OK  ] 0-1 之间的小数自动换算成百分数: _normalize_confidence(0.88) = 88.0
+  [OK  ] 超出上界: _normalize_confidence(150) = None
+  [OK  ] 低于下界: _normalize_confidence(-5) = None
+  [OK  ] 非数字: _normalize_confidence('abc') = None
+  [OK  ] 空值: _normalize_confidence(None) = None
+
+=== 4) is_correct：判分逻辑 ===
+  [OK  ] 完全一致: is_correct('9', '9', tol=0.0) = True
+  [OK  ] 估算题，容差内: is_correct('380000', '384400', tol=0.1) = True
+  [OK  ] 估算题，超容差: is_correct('300000', '384400', tol=0.1) = False
+  [OK  ] 回归用例：精确题曾被 10% 容差误判为正确: is_correct('1904', '1906', tol=0.0) = False
+  [OK  ] 精确匹配: is_correct('1906', '1906', tol=0.0) = True
+  [OK  ] 文本里含数字: is_correct('大约 9 只', '9', tol=0.0) = True
+  [OK  ] 纯文本题，完全一致: is_correct('比邻星', '比邻星', tol=0.0) = True
+  [OK  ] 回归用例：'是'是'不是'的子串，必须挡住否定反转: is_correct('不是', '是', tol=0.0) = False
+  [OK  ] 反向否定反转同样要挡住: is_correct('是', '不是', tol=0.0) = False
+  [OK  ] 语气词扩展应判对: is_correct('是的', '是', tol=0.0) = True
+  [OK  ] 简称对应全称: is_correct('达芬奇', '列奥纳多·达·芬奇', tol=0.0) = True
+  [OK  ] 答案比标准答案略长: is_correct('纽约市', '纽约', tol=0.0) = True
+  [OK  ] 回归用例：括号补充撑开长度差，曾被误判为错: is_correct('国际儿童节（又称六一国际儿童节）', '儿童节', tol=0.0) = True
+  [OK  ] 回归用例：括号补充不该影响判分: is_correct('H2O（水）', 'H2O', tol=0.0) = True
+  [OK  ] 回归用例：中文括号补充: is_correct('南极洲（极地荒漠）', '南极洲', tol=0.0) = True
+  [OK  ] 回归用例：方括号补充: is_correct('月球[地球的卫星]', '月球', tol=0.0) = True
+  [OK  ] 回归用例：中文量级后缀 万: is_correct('30万', '300000', tol=0.0) = True
+  [OK  ] 同上，走容差分支: is_correct('30万', '300000', tol=0.1) = True
+  [OK  ] 小数 + 万: is_correct('1.5万', '15000', tol=0.0) = True
+  [OK  ] 中文量级后缀 亿: is_correct('3亿', '300000000', tol=0.0) = True
+  [OK  ] 中文量级后缀 千: is_correct('2千', '2000', tol=0.0) = True
+  [OK  ] 归一化后落在容差内: is_correct('30万', '300001', tol=0.1) = True
+  [OK  ] 归一化后仍超出容差: is_correct('20万', '300000', tol=0.1) = False
+  [OK  ] 含数字但非数值的答案不该被当成数值题: is_correct('H2O', 'H2O', tol=0.0) = True
+  [OK  ] 完全无关: is_correct('错答', '9', tol=0.0) = False
+  [OK  ] 空答案: is_correct(None, '9', tol=0.0) = False
+  [OK  ] 空字符串: is_correct('', '9', tol=0.0) = False
+
+=== 5) compute_metrics：手算校验 ===
+  [OK  ] 全报 90% 却全错 → accuracy: expect=0.0 got=0.0
+  [OK  ] 全报 90% 却全错 → mean_confidence: expect=0.9 got=0.9
+  [OK  ] 全报 90% 却全错 → gap: expect=0.9 got=0.9
+  [OK  ] 全报 90% 却全错 → ECE: expect=0.9 got=0.9
+  [OK  ] 完美校准（报 70% 恰好 70% 对）→ ECE=0.0 gap=0.0
+  [OK  ] 校准分 = 1 − ECE = 1.0
+
+=== 6) ICC(1,1)：三个可精确手算的用例 ===
+  [OK  ] 组内零变异（完美信度）→ ICC = 1.0（期望 1.0）
+  [OK  ] 组间无差异、组内全抖动 → ICC = -0.5（期望 −0.5，即理论下界）
+  [OK  ] 高信度情形 → ICC = 0.9901（期望 0.9901；MSB=1200.0, MSW=4.0）
+  [OK  ] 判读等级 → excellent（高于 0.90）
+  [OK  ] 只有 1 道题 → ICC = None（应为 None，宁缺勿假）
+  [OK  ] ICC=0.30 → poor
+  [OK  ] ICC=0.60 → moderate
+  [OK  ] ICC=0.80 → good
+  [OK  ] ICC=0.95 → excellent
+
+=== 7) 端到端：A 组（重复采样）===
+  题目数 8，每题重复 5.0 次
+  平均确信度标准差 = 7.171
+  ICC = 0.7622（good（0.75–0.90））
+  效度层指标 = {'n_items': 40, 'accuracy': 1.0, 'mean_confidence': 0.794, 'gap': -0.206, 'ECE': 0.206, 'Brier': 0.0636, 'hard_gap': -0.398, 'parse_fail_rate': 0.0}
+  [OK  ] A 组能算出 ICC
+  [OK  ] A 组能算出确信度标准差
+
+=== 8) 端到端：B 组（顺序对照）===
+  校准分（前置）= 0.8037
+  校准分（后置）= 0.6825
+  Δ_order = 0.1212
+  解读：Δ_order 显著为正：前置顺序让模型看起来校准得更好。现有 benchmark 普遍采用前置，可能因此系统性高估了元认知水平。
+  [OK  ] B 组能算出 Δ_order
+
+=== 9) 端到端：C 组（温度对照）+ 汇总报告 ===
+  默认温度 std = 7.171，0 温度 std = 3.8441
+  temperature_share = 0.5361
+  [OK  ] 能算出温度对抖动的贡献占比
+
+  报告结构：
+    · benchmark
+    · screening
+    · A_重复采样
+    · B_顺序对照
+    · C_温度对照
+    · A_vs_C_温度占比
+    · headline
+  [OK  ] 报告含一句话结论：校准分 0.794，ICC 0.7622（good（0.75–0.90））。
+
+====================================================
+自检结果：全部通过
